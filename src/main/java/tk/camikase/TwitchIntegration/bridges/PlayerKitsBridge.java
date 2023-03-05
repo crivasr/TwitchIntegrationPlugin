@@ -44,11 +44,11 @@ public class PlayerKitsBridge {
         return playerKit;
     }
 
-    public long getCooldown(Player player, String kit) {
+    public long getRawCooldown(Player player, String kit) {
         return jugadorManager.getCooldown(player, kit);
     }
 
-    public long getCooldown(UUID uuid, String kit) {
+    public long getRawCooldown(UUID uuid, String kit) {
         FakePlayer jugador = new FakePlayer(uuid);
         return jugadorManager.getCooldown(jugador, kit);
     }

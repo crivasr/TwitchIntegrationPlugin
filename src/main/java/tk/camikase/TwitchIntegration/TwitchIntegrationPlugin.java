@@ -122,10 +122,10 @@ public final class TwitchIntegrationPlugin extends JavaPlugin implements Listene
                 }
 
                 ArrayList<Member> members = dbManager.getByTwitchId(twitchId);
-                long max = playerKitsBridge.getCooldown(minecraftUUID, "Sub");
+                long max = playerKitsBridge.getRawCooldown(minecraftUUID, "Sub");
 
                 for (int i = 0; i < members.size(); i++) {
-                    long cd = playerKitsBridge.getCooldown(members.get(i).minecraftUUID, "Sub");
+                    long cd = playerKitsBridge.getRawCooldown(members.get(i).minecraftUUID, "Sub");
                     max = cd > max ? cd : max;
                 }
 
