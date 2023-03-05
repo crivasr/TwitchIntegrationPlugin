@@ -1,0 +1,11 @@
+name: TwitchIntegration
+main: tk.camikase.TwitchIntegration.TwitchIntegrationPlugin
+version: 1.0-SNAPSHOT
+author: CamiKase
+
+depend: [PlayerKits, LuckPerms]
+
+commands:
+  claimsub:
+    description: Reclamar el rol de sub
+    usage: /<command>

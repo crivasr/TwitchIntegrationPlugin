@@ -1,0 +1,5 @@
+JDBC_URL: "jdbc:mysql://localhost:3306/test"
+DB_USERNAME: "admin"
+DB_PASSWORD: "password"
+PORT: 8000
+BROADCASTER_ID:
