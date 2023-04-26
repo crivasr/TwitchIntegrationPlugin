@@ -29,18 +29,11 @@ public final class WebhookHandler implements HttpHandler {
     private final TwitchIntegrationPlugin twitchIntegrationPlugin;
     
     private final String secretKey;
-    private static WebhookHandler webhookHandlerInstance;
 
     public WebhookHandler(final TwitchIntegrationPlugin twitchIntegrationPlugin, final String secretKey) {
         this.twitchIntegrationPlugin = twitchIntegrationPlugin;
         
         this.secretKey = secretKey;
-        
-        webhookHandlerInstance = this;
-    }
-
-    public static WebhookHandler getInstance() {
-        return webhookHandlerInstance;
     }
 
     public void notifyState(String state) {
@@ -115,7 +108,7 @@ public final class WebhookHandler implements HttpHandler {
 
             respond(t, "Valid Signature", 200);
 
-            twitchIntegrationPlugin.linkAccounts(twitchId, state);
+            twitchIntegrationPlugin.getAccountLinkHelper().linkAccount(twitchId, state);
         } catch (Exception e) {
             respond(t, "Internal Server Error", 500);
         }
