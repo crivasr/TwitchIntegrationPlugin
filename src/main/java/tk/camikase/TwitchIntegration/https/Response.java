@@ -1,4 +1,4 @@
-package tk.camikase.TwitchIntegration.HTTPS;
+package tk.camikase.TwitchIntegration.https;
 
 public class Response {
     public String content;

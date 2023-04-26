@@ -14,16 +14,15 @@ import pk.ajneb97.model.KitJugador;
 import tk.camikase.TwitchIntegration.TwitchIntegrationPlugin;
 import tk.camikase.TwitchIntegration.utils.FakePlayer;
 
-public class PlayerKitsBridge {
+public final class PlayerKitsBridge {
+    private PlayerKits playerKit;
+    private final JugadorManager jugadorManager;
 
-    private PlayerKits playerKit = null;
-    private JugadorManager jugadorManager = null;
-
-    public PlayerKitsBridge() {
+    public PlayerKitsBridge(final TwitchIntegrationPlugin twitchIntegrationPlugin) {
         Plugin pKit = Bukkit.getPluginManager().getPlugin("PlayerKits");
 
-        if (pKit == null || !(pKit instanceof PlayerKits)) {
-            Logger logger = TwitchIntegrationPlugin.getInstance().getLogger();
+        if (!(pKit instanceof PlayerKits)) {
+            Logger logger = twitchIntegrationPlugin.getLogger();
             logger.info("PlayerKits not found");
         }
 
@@ -37,7 +36,7 @@ public class PlayerKitsBridge {
 
         Plugin pKit = Bukkit.getPluginManager().getPlugin("PlayerKits");
 
-        if (pKit != null && pKit instanceof PlayerKits) {
+        if (pKit instanceof PlayerKits) {
             playerKit = (PlayerKits) pKit;
         }
 
@@ -61,7 +60,7 @@ public class PlayerKitsBridge {
         String cdString = playerKit.getKits().getString("Kits." + kit + ".cooldown");
         long cd = Long.parseLong(cdString) * 1000;
 
-        for (KitJugador k : jugadorDatos.getKits()) {
+        for (final KitJugador k : jugadorDatos.getKits()) {
             if (k.getNombre().equals(kit)) {
                 k.setCooldown(System.currentTimeMillis() - cd + cooldown * 1000);
                 break;

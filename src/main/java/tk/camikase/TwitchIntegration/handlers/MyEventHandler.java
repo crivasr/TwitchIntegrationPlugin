@@ -1,7 +1,7 @@
 package tk.camikase.TwitchIntegration.handlers;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -14,63 +14,57 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import tk.camikase.TwitchIntegration.TwitchIntegrationPlugin;
 import tk.camikase.TwitchIntegration.bridges.LuckPermsBridge;
 import tk.camikase.TwitchIntegration.bridges.TwitchBridge;
-import tk.camikase.TwitchIntegration.database.Member;
-import tk.camikase.TwitchIntegration.database.databaseManager;
+import tk.camikase.TwitchIntegration.storage.controller.MemberDataController;
+import tk.camikase.TwitchIntegration.storage.model.MemberModel;
 
-public class MyEventHandler implements Listener {
-    private TwitchIntegrationPlugin plugin = null;
+public final class MyEventHandler implements Listener {
+    private final TwitchIntegrationPlugin twitchIntegrationPlugin;
 
-    private LuckPermsBridge luckPermsBridge = null;
-    private TwitchBridge twitchBridge = null;
-    private databaseManager dbManager = null;
+    private final LuckPermsBridge luckPermsBridge;
+    private final TwitchBridge twitchBridge;
+    private final MemberDataController memberDataController;
 
-    public MyEventHandler(TwitchIntegrationPlugin plugin) {
-        this.plugin = plugin;
+    public MyEventHandler(final TwitchIntegrationPlugin twitchIntegrationPlugin) {
+        this.twitchIntegrationPlugin = twitchIntegrationPlugin;
 
-        luckPermsBridge = plugin.getLuckPermsBridge();
-        twitchBridge = plugin.getTwitchBridge();
-        dbManager = plugin.getdbManager();
+        luckPermsBridge = twitchIntegrationPlugin.getLuckPermsBridge();
+        twitchBridge = twitchIntegrationPlugin.getTwitchBridge();
+
+        memberDataController = twitchIntegrationPlugin.getStorageHelper().getMemberDataController();
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onLogin(PlayerJoinEvent event) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-            @Override
-            public void run() {
-                UUID minecraftUUID = event.getPlayer().getUniqueId();
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onLogin(final PlayerJoinEvent event) {
+        Bukkit.getScheduler().runTaskAsynchronously(twitchIntegrationPlugin, () -> {
+            final UUID uuid = event.getPlayer().getUniqueId();
 
-                if (minecraftUUID == null) {
-                    plugin.getServer().getConsoleSender().sendMessage(ChatColor.YELLOW + "null uuid");
+            final List<MemberModel> members = memberDataController.getMembersByUniqueId(uuid);
+            if (members.size() == 0) {
+                twitchIntegrationPlugin.getServer().getConsoleSender().sendMessage(ChatColor.YELLOW + uuid.toString() + " no tiene cuenta linkeada.");
+
+                if (luckPermsBridge.isPlayerInGroup(event.getPlayer(), "suscriptor")) {
+                    event.getPlayer().sendMessage(ChatColor.YELLOW
+                            + "No tienes ninguna cuenta linkeada, para recuperar el rol de sub ejecuta el siguiente comando y sigue las instrucciones: "
+                            + ChatColor.BLUE + "/claimsub");
+                }
+
+                luckPermsBridge.removePermission(uuid, "group.suscriptor");
+                return;
+            }
+
+            try {
+                if (twitchBridge.isSub(members.get(0).twitchId, twitchIntegrationPlugin.getPluginConfig().getBroadcasterId())) {
+                    luckPermsBridge.addPermission(uuid, "group.suscriptor");
+                    twitchIntegrationPlugin.getServer().getConsoleSender().sendMessage(ChatColor.GREEN + uuid.toString() + " es sub.");
+
                     return;
                 }
 
-                ArrayList<Member> members = dbManager.getByMCUUID(minecraftUUID);
-                if (members.size() == 0) {
-                    plugin.getServer().getConsoleSender()
-                            .sendMessage(ChatColor.YELLOW + minecraftUUID.toString() + " no tiene cuenta linkeada.");
+                luckPermsBridge.removePermission(uuid, "group.suscriptor");
 
-                    if (luckPermsBridge.isPlayerInGroup(event.getPlayer(), "suscriptor")) {
-                        event.getPlayer().sendMessage(ChatColor.YELLOW
-                                + "No tienes ninguna cuenta linkeada, para recuperar el rol de sub ejecuta el siguiente comando y sigue las instrucciones: "
-                                + ChatColor.BLUE + "/claimsub");
-                    }
-                    luckPermsBridge.removePermission(minecraftUUID, "group.suscriptor");
-                    return;
-                }
-                try {
-                    if (twitchBridge.isSub(members.get(0).twitchId, plugin.getConfig().getString("BROADCASTER_ID"))) {
-                        luckPermsBridge.addPermission(minecraftUUID, "group.suscriptor");
-                        plugin.getServer().getConsoleSender()
-                                .sendMessage(ChatColor.GREEN + minecraftUUID.toString() + " es sub.");
-                        return;
-                    }
-
-                    luckPermsBridge.removePermission(minecraftUUID, "group.suscriptor");
-                    plugin.getServer().getConsoleSender()
-                            .sendMessage(ChatColor.YELLOW + minecraftUUID.toString() + " no es sub.");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                twitchIntegrationPlugin.getServer().getConsoleSender().sendMessage(ChatColor.YELLOW + uuid.toString() + " no es sub.");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
     }

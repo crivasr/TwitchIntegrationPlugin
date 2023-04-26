@@ -1,4 +1,4 @@
-package tk.camikase.TwitchIntegration.HTTPS;
+package tk.camikase.TwitchIntegration.https;
 
 import tk.camikase.TwitchIntegration.TwitchIntegrationPlugin;
 
@@ -22,18 +22,13 @@ import com.sun.net.httpserver.HttpsServer;
 import com.sun.net.httpserver.HttpHandler;
 
 public class MyHttpsServer {
+    private final TwitchIntegrationPlugin twitchIntegrationPlugin;
+    private HttpsServer httpsServer;
 
-    private HttpsServer httpsServer = null;
-    private int port;
+    public MyHttpsServer(final TwitchIntegrationPlugin twitchIntegrationPlugin) {
+        this.twitchIntegrationPlugin = twitchIntegrationPlugin;
 
-    public MyHttpsServer(int port) {
-
-        this.port = port;
         initHttpsServer();
-    }
-
-    public int getPort() {
-        return port;
     }
 
     public void addContext(String path, HttpHandler handler) {
@@ -43,7 +38,7 @@ public class MyHttpsServer {
     public void initHttpsServer() {
         try {
             // setup the socket address
-            InetSocketAddress address = new InetSocketAddress(port);
+            InetSocketAddress address = new InetSocketAddress(twitchIntegrationPlugin.getPluginConfig().getHttpServerPort());
 
             // initialise the HTTPS server
             httpsServer = HttpsServer.create(address, 0);
@@ -52,8 +47,7 @@ public class MyHttpsServer {
             // initialise the keystore
             char[] password = "password".toCharArray();
             KeyStore ks = KeyStore.getInstance("JKS");
-            FileInputStream fis = new FileInputStream(
-                    TwitchIntegrationPlugin.getInstance().getDataFolder() + "/cert.jks");
+            FileInputStream fis = new FileInputStream(twitchIntegrationPlugin.getDataFolder() + "/cert.jks");
             ks.load(fis, password);
 
             // setup the key manager factory
@@ -87,12 +81,12 @@ public class MyHttpsServer {
             });
             httpsServer.setExecutor(null); // creates a default executor
             httpsServer.start();
-            ConsoleCommandSender sender = TwitchIntegrationPlugin.getInstance().getServer().getConsoleSender();
-            sender.sendMessage(ChatColor.GREEN + "Creating server on port: " + port);
+            ConsoleCommandSender sender = twitchIntegrationPlugin.getServer().getConsoleSender();
+            sender.sendMessage(ChatColor.GREEN + "Creating server on port: " + twitchIntegrationPlugin.getPluginConfig().getHttpServerPort());
         } catch (FileNotFoundException e) {
-            TwitchIntegrationPlugin.getInstance().getLogger().info("Key not found");
+            twitchIntegrationPlugin.getLogger().info("Key not found");
         } catch (Exception e) {
-            TwitchIntegrationPlugin.getInstance().getLogger().info("Error creating TwitchIntegration server");
+            twitchIntegrationPlugin.getLogger().info("Error creating TwitchIntegration server");
         }
     }
 }

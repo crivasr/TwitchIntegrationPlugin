@@ -1,6 +1,6 @@
 name: TwitchIntegration
 main: tk.camikase.TwitchIntegration.TwitchIntegrationPlugin
-version: 1.0-SNAPSHOT
+version: 1.0.1
 author: CamiKase
 
 depend: [PlayerKits, LuckPerms]
