@@ -34,7 +34,7 @@ public final class AccountLinkHelper implements IAccountLinkHelper {
     }
 
     @Override
-    public void linkAccount(String twitchId, String state) {
+    public void linkAccount(final String twitchId, final String state) {
         Bukkit.getScheduler().runTaskAsynchronously(twitchIntegrationPlugin, () -> {
             final UUID uuid = twitchIntegrationPlugin.getStateMap().remove(state);
 
@@ -44,10 +44,10 @@ public final class AccountLinkHelper implements IAccountLinkHelper {
             }
 
             final List<MemberModel> members = dataController.getMembersByTwitchId(twitchId);
-            long max = playerKitsBridge.getRawCooldown(uuid, "Sub");
+            long max = playerKitsBridge.getCooldown(uuid, "Sub");
 
             for (final MemberModel member : members) {
-                long cd = playerKitsBridge.getRawCooldown(member.getUuid(), "Sub");
+                long cd = playerKitsBridge.getCooldown(member.getUuid(), "Sub");
                 max = Math.max(cd, max);
             }
 

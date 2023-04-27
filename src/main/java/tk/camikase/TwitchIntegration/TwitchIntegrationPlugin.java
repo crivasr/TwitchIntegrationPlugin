@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import lombok.AccessLevel;
 import lombok.Getter;
 
+import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -17,7 +18,7 @@ import tk.camikase.TwitchIntegration.bridges.LuckPermsBridge;
 import tk.camikase.TwitchIntegration.bridges.PlayerKitsBridge;
 import tk.camikase.TwitchIntegration.bridges.TwitchBridge;
 import tk.camikase.TwitchIntegration.executors.ClaimSubExecutor;
-import tk.camikase.TwitchIntegration.handlers.MyEventHandler;
+import tk.camikase.TwitchIntegration.listener.PlayerLoginListener;
 import tk.camikase.TwitchIntegration.handlers.WebhookHandler;
 import tk.camikase.TwitchIntegration.link.AccountLinkHelper;
 import tk.camikase.TwitchIntegration.link.IAccountLinkHelper;
@@ -35,7 +36,7 @@ public final class TwitchIntegrationPlugin extends JavaPlugin {
 
     private PluginConfig pluginConfig;
 
-    private ListeningExecutorService executorService;
+    private ListeningExecutorService executorService; // I'll use this someday
 
     private IDatabaseHelper databaseHelper;
     private IStorageHelper storageHelper;
@@ -90,9 +91,12 @@ public final class TwitchIntegrationPlugin extends JavaPlugin {
 
         httpsServer.addContext("/link", webhookHandler);
 
-        getCommand("claimsub").setExecutor(new ClaimSubExecutor(this));
+        final PluginCommand claimSubCommand = getCommand("claimsub");
+        if (claimSubCommand != null) {
+            claimSubCommand.setExecutor(new ClaimSubExecutor(this));
+        }
 
-        getServer().getPluginManager().registerEvents(new MyEventHandler(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerLoginListener(this), this);
     }
 
     @Override
@@ -103,6 +107,8 @@ public final class TwitchIntegrationPlugin extends JavaPlugin {
         playerKitsBridge = null;
         luckPermsBridge = null;
         twitchBridge = null;
+
+        accountLinkHelper = null;
 
         storageHelper = null;
 

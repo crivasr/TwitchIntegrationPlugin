@@ -18,8 +18,8 @@ public final class MemberDataController {
     private final static String CREATE_TABLE_QUERY = "CREATE TABLE IF NOT EXISTS tblUsers (" +
             "minecraft_uuid VARCHAR(36), " +
             "twitch_id VARCHAR(10)" +
-            ");";
-    private final static String ACCOUNT_LINK_QUERY = "INSERT INTO tblUsers(minecraft_uuid, twitch_id) VALUES ('%s', '%s')";
+            ")";
+    private final static String ACCOUNT_LINK_QUERY = "INSERT INTO tblUsers (minecraft_uuid, twitch_id) VALUES ('%s', '%s')";
     private final static String ACCOUNT_UNLINK_QUERY = "DELETE FROM tblUsers WHERE twitch_id = %s";
     private final static String ACCOUNT_GET_UUID_QUERY = "SELECT minecraft_uuid, twitch_id FROM tblUsers WHERE minecraft_uuid = '%s'";
     private final static String ACCOUNT_GET_TWITCH_QUERY = "SELECT minecraft_uuid, twitch_id FROM tblUsers WHERE twitch_id = '%s'";

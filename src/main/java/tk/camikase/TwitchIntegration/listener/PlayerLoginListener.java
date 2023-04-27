@@ -1,4 +1,4 @@
-package tk.camikase.TwitchIntegration.handlers;
+package tk.camikase.TwitchIntegration.listener;
 
 import java.io.IOException;
 import java.util.List;
@@ -9,22 +9,22 @@ import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 
+import org.bukkit.event.player.PlayerLoginEvent;
 import tk.camikase.TwitchIntegration.TwitchIntegrationPlugin;
 import tk.camikase.TwitchIntegration.bridges.LuckPermsBridge;
 import tk.camikase.TwitchIntegration.bridges.TwitchBridge;
 import tk.camikase.TwitchIntegration.storage.controller.MemberDataController;
 import tk.camikase.TwitchIntegration.storage.model.MemberModel;
 
-public final class MyEventHandler implements Listener {
+public final class PlayerLoginListener implements Listener {
     private final TwitchIntegrationPlugin twitchIntegrationPlugin;
 
     private final LuckPermsBridge luckPermsBridge;
     private final TwitchBridge twitchBridge;
     private final MemberDataController memberDataController;
 
-    public MyEventHandler(final TwitchIntegrationPlugin twitchIntegrationPlugin) {
+    public PlayerLoginListener(final TwitchIntegrationPlugin twitchIntegrationPlugin) {
         this.twitchIntegrationPlugin = twitchIntegrationPlugin;
 
         luckPermsBridge = twitchIntegrationPlugin.getLuckPermsBridge();
@@ -34,7 +34,7 @@ public final class MyEventHandler implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onLogin(final PlayerJoinEvent event) {
+    public void onLogin(final PlayerLoginEvent event) {
         Bukkit.getScheduler().runTaskAsynchronously(twitchIntegrationPlugin, () -> {
             final UUID uuid = event.getPlayer().getUniqueId();
 

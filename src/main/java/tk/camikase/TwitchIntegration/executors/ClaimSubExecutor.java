@@ -20,12 +20,11 @@ public final class ClaimSubExecutor implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof final Player player)) {
             sender.sendMessage("This command can only be run by a player.");
             return false;
         }
 
-        final Player player = (Player) sender;
         final UUID uuid = player.getUniqueId();
         final String state = CryptoUtil.randomString(7, "0123456789abcdefghijklmnopqrstuvwxyz");
 
@@ -33,7 +32,7 @@ public final class ClaimSubExecutor implements CommandExecutor {
         twitchIntegrationPlugin.getStateMap().put(state, uuid);
 
         player.sendMessage(
-                ChatColor.GREEN + "Linkea tu cuenta de Twitch aqui: \n" +
+                   ChatColor.GREEN + "Linkea tu cuenta de Twitch aqui: \n" +
                    ChatColor.AQUA + "-     https://luisardito.camikase.tk/link?state=" +
                    state
         );
