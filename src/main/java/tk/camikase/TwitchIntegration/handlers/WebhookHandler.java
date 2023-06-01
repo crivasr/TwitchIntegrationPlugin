@@ -22,37 +22,35 @@ import com.sun.net.httpserver.HttpsExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import tk.camikase.TwitchIntegration.TwitchIntegrationPlugin;
-import tk.camikase.TwitchIntegration.HTTPS.HttpsRequests;
-import tk.camikase.TwitchIntegration.utils.Crypto;
+import tk.camikase.TwitchIntegration.https.HttpsRequests;
+import tk.camikase.TwitchIntegration.utils.CryptoUtil;
 
-public class WebhookHandler implements HttpHandler {
-    String secretKey = null;
-    static private WebhookHandler webhookHandlerInstance = null;
+public final class WebhookHandler implements HttpHandler {
+    private final TwitchIntegrationPlugin twitchIntegrationPlugin;
+    
+    private final String secretKey;
 
-    public WebhookHandler(String secretKey) {
+    public WebhookHandler(final TwitchIntegrationPlugin twitchIntegrationPlugin, final String secretKey) {
+        this.twitchIntegrationPlugin = twitchIntegrationPlugin;
+        
         this.secretKey = secretKey;
-        webhookHandlerInstance = this;
-    }
-
-    public static WebhookHandler getInstance() {
-        return webhookHandlerInstance;
     }
 
     public void notifyState(String state) {
-        ConsoleCommandSender logger = TwitchIntegrationPlugin.getInstance().getServer().getConsoleSender();
+        ConsoleCommandSender logger = twitchIntegrationPlugin.getServer().getConsoleSender();
         logger.sendMessage(ChatColor.GREEN + secretKey);
 
         String httpsURL = "https://luisardito.camikase.tk/notify";
         try {
 
-            int port = TwitchIntegrationPlugin.getInstance().getHttpsServer().getPort();
-            String body = "state=" + URLEncoder.encode(state, "UTF-8");
+            int port = twitchIntegrationPlugin.getPluginConfig().getHttpServerPort();
+            String body = "state=" + URLEncoder.encode(state, StandardCharsets.UTF_8);
             body += "&";
-            body += "secret=" + URLEncoder.encode(secretKey, "UTF-8");
+            body += "secret=" + URLEncoder.encode(secretKey, StandardCharsets.UTF_8);
             body += "&";
-            body += "port=" + URLEncoder.encode(Integer.toString(port), "UTF-8");
+            body += "port=" + URLEncoder.encode(Integer.toString(port), StandardCharsets.UTF_8);
 
-            Map<String, String> headers = new HashMap<String, String>();
+            Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/x-www-form-urlencoded");
 
             HttpsRequests.post(httpsURL, body, headers);
@@ -94,7 +92,7 @@ public class WebhookHandler implements HttpHandler {
             }
 
             String body = getBody(t);
-            String signature = Crypto.hmacSha256(secretKey, body + timestampStr);
+            String signature = CryptoUtil.hmacSha256(secretKey, body + timestampStr);
             if (!signature.equals(reqSignature)) {
                 respond(t, "Invalid Signature", 403);
                 return;
@@ -107,9 +105,10 @@ public class WebhookHandler implements HttpHandler {
                 respond(t, "Missing property", 400);
                 return;
             }
+
             respond(t, "Valid Signature", 200);
-            TwitchIntegrationPlugin.getInstance().linkAccounts(twitchId, state);
-            return;
+
+            twitchIntegrationPlugin.getAccountLinkHelper().linkAccount(twitchId, state);
         } catch (Exception e) {
             respond(t, "Internal Server Error", 500);
         }

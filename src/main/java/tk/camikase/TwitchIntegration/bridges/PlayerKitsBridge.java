@@ -1,94 +1,80 @@
 package tk.camikase.TwitchIntegration.bridges;
 
 import java.util.UUID;
-import java.util.logging.Logger;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import pk.ajneb97.PlayerKits;
 import pk.ajneb97.managers.JugadorManager;
 import pk.ajneb97.model.JugadorDatos;
 import pk.ajneb97.model.KitJugador;
+
 import tk.camikase.TwitchIntegration.TwitchIntegrationPlugin;
-import tk.camikase.TwitchIntegration.utils.FakePlayer;
 
-public class PlayerKitsBridge {
+public final class PlayerKitsBridge {
+    private final PlayerKits playerKitsPlugin;
+    private final JugadorManager jugadorManager; // my eyes
 
-    private PlayerKits playerKit = null;
-    private JugadorManager jugadorManager = null;
+    public PlayerKitsBridge(final TwitchIntegrationPlugin twitchIntegrationPlugin) {
+        final Plugin pKit = twitchIntegrationPlugin.getServer().getPluginManager().getPlugin("PlayerKits");
 
-    public PlayerKitsBridge() {
-        Plugin pKit = Bukkit.getPluginManager().getPlugin("PlayerKits");
+        if (!(pKit instanceof PlayerKits)) {
+            playerKitsPlugin = null;
+            jugadorManager = null;
 
-        if (pKit == null || !(pKit instanceof PlayerKits)) {
-            Logger logger = TwitchIntegrationPlugin.getInstance().getLogger();
-            logger.info("PlayerKits not found");
-        }
+            Bukkit.getLogger().log(Level.SEVERE, "PlayerKits not found, shutting down...");
+            Bukkit.shutdown();
 
-        playerKit = (PlayerKits) pKit;
-        jugadorManager = playerKit.getJugadorManager();
-    }
-
-    public PlayerKits getPlayerKit() {
-        if (playerKit != null)
-            return playerKit;
-
-        Plugin pKit = Bukkit.getPluginManager().getPlugin("PlayerKits");
-
-        if (pKit != null && pKit instanceof PlayerKits) {
-            playerKit = (PlayerKits) pKit;
-        }
-
-        return playerKit;
-    }
-
-    public long getRawCooldown(Player player, String kit) {
-        return jugadorManager.getCooldown(player, kit);
-    }
-
-    public long getRawCooldown(UUID uuid, String kit) {
-        FakePlayer jugador = new FakePlayer(uuid);
-        return jugadorManager.getCooldown(jugador, kit);
-    }
-
-    public void setCooldown(Player player, String kit, long cooldown) {
-        JugadorDatos jugadorDatos = jugadorManager.getJugadorPorUUID(player.getUniqueId().toString());
-        if (jugadorDatos == null)
             return;
+        }
 
-        String cdString = playerKit.getKits().getString("Kits." + kit + ".cooldown");
-        long cd = Long.parseLong(cdString) * 1000;
+        playerKitsPlugin = (PlayerKits) pKit;
+        jugadorManager = playerKitsPlugin.getJugadorManager();
+    }
 
-        for (KitJugador k : jugadorDatos.getKits()) {
-            if (k.getNombre().equals(kit)) {
-                k.setCooldown(System.currentTimeMillis() - cd + cooldown * 1000);
+    public long getCooldown(final UUID uuid, final String kitIdentifier) {
+        final JugadorDatos jugadorDatos = jugadorManager.getJugadorPorUUID(uuid.toString());
+
+        if (jugadorDatos == null) return 0L;
+
+        for (final KitJugador kit : jugadorDatos.getKits()) {
+            if (kit.getNombre().equals(kitIdentifier)) {
+                return kit.getCooldown();
+            }
+        }
+
+        return 0L;
+    }
+
+    public void setCooldown(final UUID uuid, final String kitIdentifier, final long cooldown) {
+        final JugadorDatos jugadorDatos = jugadorManager.getJugadorPorUUID(uuid.toString());
+
+        if (jugadorDatos == null) return;
+
+        final String cooldownString = playerKitsPlugin.getKits().getString("Kits." + kitIdentifier + ".cooldown");
+        if (cooldownString == null) return;
+
+        final long parsedCooldown = Long.parseLong(cooldownString) * 1000;
+
+        for (final KitJugador kit : jugadorDatos.getKits()) {
+            if (kit.getNombre().equals(kitIdentifier)) {
+                kit.setCooldown(System.currentTimeMillis() - parsedCooldown + cooldown * 1000);
                 break;
             }
         }
     }
 
-    public void setRawCooldown(Player player, String kit, long cooldown) {
-        JugadorDatos jugadorDatos = jugadorManager.getJugadorPorUUID(player.getUniqueId().toString());
-        if (jugadorDatos == null)
-            return;
+    public void setRawCooldown(final UUID uuid, final String kitIdentifier, final long cooldown) {
+        final JugadorDatos jugadorDatos = jugadorManager.getJugadorPorUUID(uuid.toString());
+        if (jugadorDatos == null) return;
 
-        for (KitJugador k : jugadorDatos.getKits()) {
-            if (k.getNombre().equals(kit)) {
-                k.setCooldown(cooldown);
+        for (final KitJugador kit : jugadorDatos.getKits()) {
+            if (kit.getNombre().equals(kitIdentifier)) {
+                kit.setCooldown(cooldown);
                 break;
             }
         }
-    }
-
-    public void setRawCooldown(UUID uuid, String kit, long cooldown) {
-        FakePlayer jugador = new FakePlayer(uuid);
-        setRawCooldown(jugador, kit, cooldown);
-    }
-
-    public void setCooldown(UUID uuid, String kit, long cooldown) {
-        FakePlayer jugador = new FakePlayer(uuid);
-        setCooldown(jugador, kit, cooldown);
     }
 }

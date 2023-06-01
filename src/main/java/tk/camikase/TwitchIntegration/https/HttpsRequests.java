@@ -1,4 +1,4 @@
-package tk.camikase.TwitchIntegration.HTTPS;
+package tk.camikase.TwitchIntegration.https;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -14,23 +14,21 @@ public class HttpsRequests {
         HttpsURLConnection con = (HttpsURLConnection) myurl.openConnection();
 
         if (headers != null)
-            headers.forEach((key, value) -> {
-                con.setRequestProperty(key, value);
-            });
+            headers.forEach(con::setRequestProperty);
 
         con.setRequestMethod("GET");
         con.setDoInput(true);
 
-        DataInputStream input = new DataInputStream(con.getInputStream());
+        final DataInputStream input = new DataInputStream(con.getInputStream());
 
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
 
-        for (int c = input.read(); c != -1; c = input.read())
-            sb.append(c);
+        for (int c = input.read(); c != -1; c = input.read()) sb.append(c);
 
         input.close();
 
-        Response res = new Response();
+        final Response res = new Response();
+
         res.content = sb.toString();
         res.code = con.getResponseCode();
 
@@ -38,34 +36,32 @@ public class HttpsRequests {
     }
 
     public static Response post(String url, String body, Map<String, String> headers) throws IOException {
-        URL myurl = new URL(url);
-        HttpsURLConnection con = (HttpsURLConnection) myurl.openConnection();
+        final URL myurl = new URL(url);
+        final HttpsURLConnection con = (HttpsURLConnection) myurl.openConnection();
 
         con.setRequestMethod("POST");
         con.setRequestProperty("Content-length", String.valueOf(body.getBytes().length));
 
-        if (headers != null)
-            headers.forEach((key, value) -> {
-                con.setRequestProperty(key, value);
-            });
+        if (headers != null) headers.forEach(con::setRequestProperty);
 
         con.setDoOutput(true);
         con.setDoInput(true);
 
-        DataOutputStream output = new DataOutputStream(con.getOutputStream());
+        final DataOutputStream output = new DataOutputStream(con.getOutputStream());
 
         output.writeBytes(body);
         output.close();
 
-        DataInputStream input = new DataInputStream(con.getInputStream());
-        StringBuilder sb = new StringBuilder();
+        final DataInputStream input = new DataInputStream(con.getInputStream());
+        final StringBuilder sb = new StringBuilder();
 
         for (int c = input.read(); c != -1; c = input.read())
             sb.append(c);
 
         input.close();
 
-        Response res = new Response();
+        final Response res = new Response();
+
         res.content = sb.toString();
         res.code = con.getResponseCode();
 

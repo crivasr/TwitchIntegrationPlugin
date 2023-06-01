@@ -1,148 +1,121 @@
 package tk.camikase.TwitchIntegration;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 
-import org.bukkit.command.ConsoleCommandSender;
+import lombok.AccessLevel;
+import lombok.Getter;
+
+import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import tk.camikase.TwitchIntegration.HTTPS.MyHttpsServer;
+import tk.camikase.TwitchIntegration.config.PluginConfig;
+import tk.camikase.TwitchIntegration.database.DatabaseHelper;
+import tk.camikase.TwitchIntegration.database.IDatabaseHelper;
+import tk.camikase.TwitchIntegration.https.MyHttpsServer;
 import tk.camikase.TwitchIntegration.bridges.LuckPermsBridge;
 import tk.camikase.TwitchIntegration.bridges.PlayerKitsBridge;
 import tk.camikase.TwitchIntegration.bridges.TwitchBridge;
-import tk.camikase.TwitchIntegration.database.Member;
-import tk.camikase.TwitchIntegration.database.databaseManager;
 import tk.camikase.TwitchIntegration.executors.ClaimSubExecutor;
-import tk.camikase.TwitchIntegration.handlers.MyEventHandler;
+import tk.camikase.TwitchIntegration.listener.PlayerLoginListener;
 import tk.camikase.TwitchIntegration.handlers.WebhookHandler;
-import tk.camikase.TwitchIntegration.utils.Crypto;
+import tk.camikase.TwitchIntegration.link.AccountLinkHelper;
+import tk.camikase.TwitchIntegration.link.IAccountLinkHelper;
+import tk.camikase.TwitchIntegration.storage.IStorageHelper;
+import tk.camikase.TwitchIntegration.storage.StorageHelper;
+import tk.camikase.TwitchIntegration.utils.CryptoUtil;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
-public final class TwitchIntegrationPlugin extends JavaPlugin implements Listener {
+@Getter(AccessLevel.PUBLIC)
+public final class TwitchIntegrationPlugin extends JavaPlugin {
+    private static TwitchIntegrationPlugin twitchIntegrationPlugin;
 
-    private static TwitchBridge twitchBridge = null;
-    private static LuckPermsBridge luckPermsBridge = null;
-    private static PlayerKitsBridge playerKitsBridge = null;
-    private static TwitchIntegrationPlugin instance = null;
-    private static databaseManager dbManager = null;
-    private static MyHttpsServer httpsServer = null;
-    private static WebhookHandler webhookHandler = null;
+    private PluginConfig pluginConfig;
 
-    private static Map<String, UUID> stateMap = new HashMap<String, UUID>();
+    private ListeningExecutorService executorService; // I'll use this someday
+
+    private IDatabaseHelper databaseHelper;
+    private IStorageHelper storageHelper;
+
+    private IAccountLinkHelper accountLinkHelper;
+
+    private TwitchBridge twitchBridge;
+    private LuckPermsBridge luckPermsBridge;
+    private PlayerKitsBridge playerKitsBridge;
+    private MyHttpsServer httpsServer;
+    private WebhookHandler webhookHandler;
+
+    private final Map<String, UUID> stateMap = new ConcurrentHashMap<>();
+
+    @Override
+    public void onLoad() {
+        executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
+
+        saveDefaultConfig();
+    }
 
     @Override
     public void onEnable() {
-        getLogger().info("onEnable has been invoked!");
-        instance = this;
+        twitchIntegrationPlugin = this;
 
-        File dataFolder = getDataFolder();
-        if (!dataFolder.exists()) {
-            dataFolder.mkdir();
-        }
+        final FileConfiguration config = getConfig();
 
-        saveDefaultConfig();
-        FileConfiguration config = getConfig();
+        pluginConfig = new PluginConfig(
+                config.getString("database.address"),
+                config.getInt("database.port"),
+                config.getString("database.database"),
+                config.getString("database.username"),
+                config.getString("database.password"),
+                config.getString("twitch.broadcaster"),
+                config.getInt("http.port")
+        );
 
-        String JDBCUrl = config.getString("JDBC_URL");
-        String username = config.getString("DB_USERNAME");
-        String password = config.getString("DB_PASSWORD");
-        int port = config.getInt("PORT");
-
+        playerKitsBridge = new PlayerKitsBridge(this);
         luckPermsBridge = new LuckPermsBridge();
-        playerKitsBridge = new PlayerKitsBridge();
         twitchBridge = new TwitchBridge();
-        dbManager = new databaseManager(JDBCUrl, username, password);
-        httpsServer = new MyHttpsServer(port);
 
-        webhookHandler = new WebhookHandler(Crypto.randomString(32, "0123456789abcdef"));
+        databaseHelper = new DatabaseHelper(this);
+        databaseHelper.init();
+
+        storageHelper = new StorageHelper(this);
+
+        accountLinkHelper = new AccountLinkHelper(this);
+
+        httpsServer = new MyHttpsServer(this);
+
+        webhookHandler = new WebhookHandler(this, CryptoUtil.randomString(32, "0123456789abcdef"));
 
         httpsServer.addContext("/link", webhookHandler);
 
-        dbManager.createTable();
+        final PluginCommand claimSubCommand = getCommand("claimsub");
+        if (claimSubCommand != null) {
+            claimSubCommand.setExecutor(new ClaimSubExecutor(this));
+        }
 
-        this.getCommand("claimsub").setExecutor(new ClaimSubExecutor(this));
-        getServer().getPluginManager().registerEvents(new MyEventHandler(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerLoginListener(this), this);
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("onDisable has been invoked!");
-    }
+        webhookHandler = null;
+        httpsServer = null;
 
-    public static TwitchIntegrationPlugin getInstance() {
-        return instance;
-    }
+        playerKitsBridge = null;
+        luckPermsBridge = null;
+        twitchBridge = null;
 
-    public Map<String, UUID> getStateMap() {
-        return stateMap;
-    }
+        accountLinkHelper = null;
 
-    public LuckPermsBridge getLuckPermsBridge() {
-        return luckPermsBridge;
-    }
+        storageHelper = null;
 
-    public PlayerKitsBridge getPlayerKitsBridge() {
-        return playerKitsBridge;
-    }
+        databaseHelper.shutdown();
+        databaseHelper = null;
 
-    public TwitchBridge getTwitchBridge() {
-        return twitchBridge;
-    }
-
-    public databaseManager getdbManager() {
-        return dbManager;
-    }
-
-    public MyHttpsServer getHttpsServer() {
-        return httpsServer;
-    }
-
-    public WebhookHandler getWebhookHandler() {
-        return webhookHandler;
-    }
-
-    public void linkAccounts(String twitchId, String state) {
-        Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
-            @Override
-            public void run() {
-                UUID minecraftUUID = stateMap.remove(state);
-
-                ConsoleCommandSender logger = getServer().getConsoleSender();
-                if (minecraftUUID == null) {
-                    logger.sendMessage(ChatColor.RED + "Invalid state");
-                    return;
-                }
-
-                ArrayList<Member> members = dbManager.getByTwitchId(twitchId);
-                long max = playerKitsBridge.getRawCooldown(minecraftUUID, "Sub");
-
-                for (int i = 0; i < members.size(); i++) {
-                    long cd = playerKitsBridge.getRawCooldown(members.get(i).minecraftUUID, "Sub");
-                    max = cd > max ? cd : max;
-                }
-
-                playerKitsBridge.setRawCooldown(minecraftUUID, "Sub", max);
-
-                try {
-                    if (twitchBridge.isSub(twitchId, getConfig().getString("BROADCASTER_ID"))) {
-                        luckPermsBridge.addPermission(minecraftUUID, "group.suscriptor");
-                    }
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-
-                dbManager.unlinkAll(twitchId);
-                dbManager.linkAccounts(twitchId, minecraftUUID);
-            }
-        });
+        executorService = null;
+        twitchIntegrationPlugin = null;
     }
 }
